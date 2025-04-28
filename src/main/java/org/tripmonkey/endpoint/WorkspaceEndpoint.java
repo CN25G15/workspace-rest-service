@@ -27,10 +27,10 @@ import org.tripmonkey.workspace.service.WorkspaceRequester;
 @Path("/workspace/{uuid}")
 public class WorkspaceEndpoint {
 
-    @GrpcClient
+    @GrpcClient("pac")
     PatchApplier pac;
 
-    @GrpcClient
+    @GrpcClient("wrc")
     WorkspaceRequester wrc;
 
     @PATCH
