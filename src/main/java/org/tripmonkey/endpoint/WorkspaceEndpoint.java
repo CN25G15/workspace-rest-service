@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -20,11 +21,12 @@ import org.tripmonkey.rest.domain.WorkspacePatch;
 import org.tripmonkey.rest.patch.Patch;
 import org.tripmonkey.workspace.service.PatchApplier;
 
+import org.tripmonkey.workspace.service.WorkspaceCreator;
 import org.tripmonkey.workspace.service.WorkspaceRequest;
 import org.tripmonkey.workspace.service.WorkspaceRequester;
 
 
-@Path("/workspace/{uuid}")
+@Path("workspace")
 public class WorkspaceEndpoint {
 
     @GrpcClient("pac")
@@ -33,7 +35,22 @@ public class WorkspaceEndpoint {
     @GrpcClient("wrc")
     WorkspaceRequester wrc;
 
+    @GrpcClient("wrkc")
+    WorkspaceCreator wrkc;
+
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<Response> createWorkspace(@CookieParam("user") String user) {
+        return Uni.createFrom().optional(User.from(user)).log(String.format("Received request to create workspace for user %s", user))
+                .onItem().ifNull().failWith(() -> new RuntimeException("Invalid UUID for user"))
+                .onItem().ifNotNull().transform(ProtoSerde.userMapper::serialize)
+                .onItem().transformToUni(wrkc::create).onItem()
+                .transform(workspaceResponse -> Response.status(200).entity(workspaceResponse.toString()).build())
+                .onFailure().recoverWithItem(throwable -> Response.status(400).entity(throwable.getMessage()).build());
+    }
+
     @PATCH
+    @Path("{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> processPatch(@PathParam("uuid") String uuid, @CookieParam("user") String user, Patch p) {
         return Uni.createFrom().optional(User.from(user)).log(String.format("Received Patch for workspace with id %s", uuid))
@@ -46,6 +63,7 @@ public class WorkspaceEndpoint {
     }
 
     @GET
+    @Path("{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> fetchWorkspace(@PathParam("uuid") String uuid, @CookieParam("user") String user){
         return wrc.fetch(WorkspaceRequest.newBuilder().setWid(uuid).build()).onItem().transform(workspaceResponse -> {
