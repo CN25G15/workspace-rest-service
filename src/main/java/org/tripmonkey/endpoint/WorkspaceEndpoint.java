@@ -37,7 +37,7 @@ public class WorkspaceEndpoint {
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> createWorkspace(@CookieParam("user") String user) {
-        return Uni.createFrom().optional(User.from(user)).log(String.format("Received request to create workspace for user %s", user))
+        return Uni.createFrom().optional(User.from(user)).log(String.format("Received request to create workspace for user %s.", user))
                 .onItem().ifNull().failWith(() -> new RuntimeException("Invalid UUID for user"))
                 .onItem().ifNotNull().transform(ProtoMapper.userMapper::serialize)
                 .onItem().transformToUni(wrkc::create).onItem()
