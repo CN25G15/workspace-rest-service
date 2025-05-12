@@ -1,5 +1,7 @@
 package org.tripmonkey.endpoint;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import io.quarkus.grpc.GrpcClient;
 import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.CookieParam;
@@ -12,6 +14,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tripmonkey.domain.data.User;
+import org.tripmonkey.domain.data.Workspace;
 import org.tripmonkey.proto.domain.ProtoMapper;
 import org.tripmonkey.rest.domain.WorkspacePatch;
 import org.tripmonkey.rest.patch.Patch;
@@ -41,7 +44,13 @@ public class WorkspaceEndpoint {
                 .onItem().ifNull().failWith(() -> new RuntimeException("Invalid UUID for user"))
                 .onItem().ifNotNull().transform(ProtoMapper.userMapper::serialize)
                 .onItem().transformToUni(wrkc::create).onItem()
-                .transform(workspaceResponse -> Response.status(200).entity(workspaceResponse.toString()).build())
+                .transform(workspaceResponse -> {
+                    try {
+                        return Response.status(200).entity(JsonFormat.printer().print(workspaceResponse)).build();
+                    } catch (InvalidProtocolBufferException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
                 .onFailure().recoverWithItem(throwable -> Response.status(400).entity(throwable.getMessage()).build());
     }
 
@@ -65,7 +74,12 @@ public class WorkspaceEndpoint {
         return wrc.fetch(WorkspaceRequest.newBuilder().setWid(uuid).build()).onItem().transform(workspaceResponse -> {
             Response r = Response.status(404).build();
             if(workspaceResponse.hasWorkspace()) {
-                r = Response.accepted().entity(ProtoMapper.workspaceMapper.deserialize(workspaceResponse.getWorkspace())).build();
+                Workspace ws = ProtoMapper.workspaceMapper.deserialize(workspaceResponse.getWorkspace());
+                try {
+                    r = Response.accepted().entity(JsonFormat.printer().print(workspaceResponse.getWorkspace())).build();
+                } catch (InvalidProtocolBufferException e) {
+                    throw new RuntimeException(e);
+                }
             }
             return r;
         });
