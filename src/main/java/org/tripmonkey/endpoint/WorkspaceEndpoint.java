@@ -15,7 +15,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tripmonkey.domain.data.User;
 import org.tripmonkey.domain.data.Workspace;
-import org.tripmonkey.proto.domain.ProtoMapper;
+import org.tripmonkey.domain.patch.PatchBuilder;
+import org.tripmonkey.proto.map.ProtoMapper;
 import org.tripmonkey.rest.domain.WorkspacePatch;
 import org.tripmonkey.rest.patch.Patch;
 import org.tripmonkey.workspace.service.PatchApplier;
@@ -58,10 +59,13 @@ public class WorkspaceEndpoint {
     @Path("{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> processPatch(@PathParam("uuid") String uuid, @CookieParam("user") String user, Patch p) {
-        return Uni.createFrom().optional(User.from(user)).log(String.format("Received Patch for workspace with id %s", uuid))
+        return Uni.createFrom().optional(User.from(user))
+                .log(String.format("Received Patch for workspace with id %s", uuid))
+                .log(String.format("Patch received %s", p.toString()))
                 .onItem().ifNull().failWith(() -> new RuntimeException("Invalid UUID for user"))
-                        .onItem().ifNotNull().transform(user1 -> WorkspacePatch.from(uuid, user1.toString(), p))
-                        .onItem().transform(workspacePatch -> ProtoMapper.workspacePatchMapper.serialize(workspacePatch))
+                        .onItem().ifNotNull().transform(user1 -> PatchBuilder.from(uuid, user1, p))
+                        .onItem().ifNull().failWith(() -> new RuntimeException("Invalid Request"))
+                        .onItem().ifNotNull().transform(patch -> ProtoMapper.workspacePatchMapper.serialize(patch))
                         .onItem().transformToUni(pac::apply).onItem()
                 .transform(status -> Response.status((int) status.getStatus()).entity(status.getMessage()).build())
                 .onFailure().recoverWithItem(throwable -> Response.status(400).entity(throwable.getMessage()).build());
