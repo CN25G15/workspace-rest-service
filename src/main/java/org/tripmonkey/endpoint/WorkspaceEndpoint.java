@@ -16,6 +16,7 @@ import jakarta.ws.rs.core.Response;
 import org.tripmonkey.domain.data.User;
 import org.tripmonkey.domain.data.Workspace;
 import org.tripmonkey.domain.patch.PatchBuilder;
+import org.tripmonkey.patch.data.JsonPatch;
 import org.tripmonkey.proto.map.ProtoMapper;
 import org.tripmonkey.rest.domain.WorkspacePatch;
 import org.tripmonkey.rest.patch.Patch;
@@ -58,7 +59,7 @@ public class WorkspaceEndpoint {
     @PATCH
     @Path("{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Uni<Response> processPatch(@PathParam("uuid") String uuid, @CookieParam("user") String user, Patch p) {
+    public Uni<Response> processPatch(@PathParam("uuid") String uuid, @CookieParam("user") String user, Patch p) { //formerly Patch
         return Uni.createFrom().optional(User.from(user))
                 .log(String.format("Received Patch for workspace with id %s", uuid))
                 .log(String.format("Patch received %s", p.toString()))
