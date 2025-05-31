@@ -2,6 +2,7 @@ package org.tripmonkey.endpoint;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+import io.micrometer.core.annotation.Counted;
 import io.quarkus.grpc.GrpcClient;
 import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.CookieParam;
@@ -39,6 +40,7 @@ public class WorkspaceEndpoint {
     @GrpcClient("wrkc")
     WorkspaceCreator wrkc;
 
+    @Counted(value = "total.create.workspace.requests", extraTags = {"integer","totalCounter"})
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> createWorkspace(@CookieParam("user") String user) {
@@ -56,6 +58,7 @@ public class WorkspaceEndpoint {
                 .onFailure().recoverWithItem(throwable -> Response.status(400).entity(throwable.getMessage()).build());
     }
 
+    @Counted(value = "total.patch.workspace.requests", extraTags = {"integer","totalCounter"})
     @PATCH
     @Path("{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -72,6 +75,7 @@ public class WorkspaceEndpoint {
                 .onFailure().recoverWithItem(throwable -> Response.status(400).entity(throwable.getMessage()).build());
     }
 
+    @Counted(value = "total.fetch.workspace.requests", extraTags = {"integer","totalCounter"})
     @GET
     @Path("{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
