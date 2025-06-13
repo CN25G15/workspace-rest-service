@@ -84,10 +84,14 @@ public class WorkspaceEndpoint {
             Response r = Response.status(404).build();
             if(workspaceResponse.hasWorkspace()) {
                 Workspace ws = ProtoMapper.workspaceMapper.deserialize(workspaceResponse.getWorkspace());
-                try {
-                    r = Response.accepted().entity(JsonFormat.printer().print(workspaceResponse.getWorkspace())).build();
-                } catch (InvalidProtocolBufferException e) {
-                    throw new RuntimeException(e);
+                if(ws.getCollaborators().stream().map(User::toString).anyMatch(s -> s.equals(user))) {
+                    try {
+                        r = Response.accepted().entity(JsonFormat.printer().print(workspaceResponse.getWorkspace())).build();
+                    } catch (InvalidProtocolBufferException e) {
+                        r = Response.status(500).build();
+                    }
+                }  else {
+                    r = Response.status(403).build();
                 }
             }
             return r;
